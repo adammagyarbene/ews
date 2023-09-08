@@ -27,7 +27,7 @@ You easily figure this out y = 2x — 1
 You probably tried that out with a couple of other values and see that it fits. Congratulations, you’ve just done the basics of machine learning in your head.
 
 Check tensorflow version
-```
+```python
 import tensorflow as tf
 
 print(tf.__version__)
@@ -35,7 +35,7 @@ print(tf.__version__)
 
 Okay, here’s our first line of code. This is written using Python and TensorFlow and an API in TensorFlow called keras. Keras makes it really easy to define neural networks. A neural network is basically a set of functions which can learn patterns.
 
-```
+```python
 import numpy as np
 from tensorflow import keras
 
@@ -47,7 +47,7 @@ model = keras.Sequential(layer)
 
 The simplest possible neural network is one that has only one neuron in it, and that’s what this line of code does. In keras we use the word Dense to define a layer of connected neurons. There is only one Dense here means that there is only one layer and there is only single unit in it so there is only one neuron. Successive layers in keras are defined in a sequence so the word Sequential . You define the shape of what's input to the neural network in the first and in this case the only layer, and you can see that our input shape is super simple. It's just one value. You've probably seen that for machine learning, you need to know and use a lot of math, calculus probability and the like. It's really good to understand that as you want to optimize your models but the nice thing for now about TensorFlow and keras is that a lot of that math is implemented for you in functions. There are two function roles that you should be aware of though and these are loss functions and optimizers.
 
-```
+```python
 model.compile(optimizer = 'sgd', loss = 'mean_squared_error')
 ```
 
@@ -62,7 +62,7 @@ Our next step is to represent the known data. These are the Xs and the Ys that y
 Here’s the code of what we talked about.
 
 
-```
+```python
 xs = np.array([-2.0, -1.0, 0.0, 1.0, 2.0, 3.0], dtype=float)
 ys = np.array([-3.0, -1.0, 1.0, 3.0, 5.0, 7.0], dtype=float)
 
@@ -84,7 +84,7 @@ The first is that you trained it using very little data. There’s only six poin
 
 ## Excercise 2
 
-```
+```python
 def house_model(y_new):
     xs=[]
     ys=[]
@@ -173,17 +173,94 @@ Now we have loaded the dataset (train_ds and valid_ds), each sample is a tuple o
 
 Let's load the images
 
+```python
+
+# preprocess data
+def decode_img(img):
+  # convert the compressed string to a 3D uint8 tensor
+  img = tf.image.decode_jpeg(img, channels=3)
+  # Use `convert_image_dtype` to convert to floats in the [0,1] range.
+  img = tf.image.convert_image_dtype(img, tf.float32)
+  # resize the image to the desired size.
+  return tf.image.resize(img, [299, 299])
+
+```
+
 ## Block7
 
 Everything is as expected, now let's prepare this dataset for training
 
+```python
+def process_path(filepath, label):
+  # load the raw data from the file as a string
+  img = tf.io.read_file(filepath)
+  img = decode_img(img)
+  return img, label
+
+
+valid_ds = valid_ds.map(process_path)
+train_ds = train_ds.map(process_path)
+
+def prepare_for_training(ds, cache=True, batch_size=64, shuffle_buffer_size=1000):
+  if cache:
+    if isinstance(cache, str):
+      ds = ds.cache(cache)
+    else:
+      ds = ds.cache()
+  # shuffle the dataset
+  ds = ds.shuffle(buffer_size=shuffle_buffer_size)
+  # Repeat forever
+  ds = ds.repeat()
+  # split to batches
+  ds = ds.batch(batch_size)
+  # `prefetch` lets the dataset fetch batches in the background while the model
+  # is training.
+  ds = ds.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+  return ds
+
+valid_ds = prepare_for_training(valid_ds, batch_size=batch_size, cache="valid-cached-data")
+train_ds = prepare_for_training(train_ds, batch_size=batch_size, cache="train-cached-data")
+```
+
 ## Block8
+Show images
+
+```python
+batch = next(iter(valid_ds))
+
+def show_batch(batch):
+  plt.figure(figsize=(12,12))
+  for n in range(25):
+      ax = plt.subplot(5,5,n+1)
+      plt.imshow(batch[0][n])
+      plt.title(class_names[batch[1][n].numpy()].title())
+      plt.axis('off')
+
+show_batch(batch)
+```
 
 As you can see, it's extremely hard to differentiate between malignant and benign diseases, let's see how our model will deal with it.
 
 Great, now our dataset is ready, let's dive into building our model.
 
 ## Block9
+
+```python
+# building the model
+# InceptionV3 model & pre-trained weights
+module_url = "https://tfhub.dev/google/tf2-preview/inception_v3/feature_vector/4"
+
+m = tf.keras.Sequential([
+    hub.KerasLayer(module_url, output_shape=[2048], trainable=False),
+    tf.keras.layers.Dense(1, activation="sigmoid")
+])
+
+m.build([None, 299, 299, 3])
+
+m.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+
+m.summary()
+```
 
 Notice before, we resized all images to (299, 299, 3), and that's because of what InceptionV3 architecture expects as input, so we'll be using transfer learning with TensorFlow Hub library to download and load the InceptionV3 architecture along with its ImageNet pre-trained weights.
 
@@ -192,12 +269,92 @@ We set trainable to False so we won't be able to adjust the pre-trained weights 
 After that, since this is a binary classification, we built our model using binary crossentropy loss, and used accuracy as our metric (not that reliable metric, we'll see sooner why), here is the output of our model summary:
 
 ## Block10
+Training the model
 
+```python
+
+
+history = m.fit(train_ds, 
+                validation_data=valid_ds,
+                steps_per_epoch=n_training_samples // batch_size,
+                validation_steps=n_validation_samples // batch_size,
+                verbose=1,
+                epochs=25
+)
+
+```
 Since fit() method doesn't know the number of samples there are in the dataset, we need to specify steps_per_epoch and validation_steps parameters for the number of iterations (the number of samples divided by the batch size) of the training set and validatiion set respectively.
 
 ## Block11
 
+Model Evaluation
+
+```python
+
+# evaluation
+# load testing set
+test_metadata_filename = "test.csv"
+
+df_test = pd.read_csv(test_metadata_filename)
+
+n_testing_samples = len(df_test)
+
+print("Number of testing samples:", n_testing_samples)
+
+test_ds = tf.data.Dataset.from_tensor_slices((df_test["filepath"], df_test["label"]))
+
+def prepare_for_testing(ds, cache=True, shuffle_buffer_size=1000):
+  if cache:
+    if isinstance(cache, str):
+      ds = ds.cache(cache)
+    else:
+      ds = ds.cache()
+  ds = ds.shuffle(buffer_size=shuffle_buffer_size)
+  return ds
+
+test_ds = test_ds.map(process_path)
+
+test_ds = prepare_for_testing(test_ds, cache="test-cached-data")
+
+```
+
 Now that we've trained our model to predict the benign and malignant classes let's make a function that predicts the class of any image passed to it.
+
+## Block 12
+
+```python
+
+# convert testing set to numpy array to fit in memory (don't do that when testing
+# set is too large)
+y_test = np.zeros((n_testing_samples,))
+X_test = np.zeros((n_testing_samples, 299, 299, 3))
+
+for i, (img, label) in enumerate(test_ds.take(n_testing_samples)):
+  # print(img.shape, label.shape)
+  X_test[i] = img
+  y_test[i] = label.numpy()
+
+print("y_test.shape:", y_test.shape)
+
+
+# a function given a function, it predicts the class of the image
+def predict_image_class(img_path, model, threshold=0.5):
+  img = tf.keras.preprocessing.image.load_img(img_path, target_size=(299, 299))
+  img = tf.keras.preprocessing.image.img_to_array(img)
+  img = tf.expand_dims(img, 0) # Create a batch
+  img = tf.keras.applications.inception_v3.preprocess_input(img)
+  img = tf.image.convert_image_dtype(img, tf.float32)
+  predictions = model.predict(img)
+  score = predictions.squeeze()
+  if score >= threshold:
+    print(f"This image is {100 * score:.2f}% malignant.")
+  else:
+    print(f"This image is {100 * (1 - score):.2f}% benign.")
+  plt.imshow(img[0])
+  plt.axis('off')
+  plt.show()
+
+```
 
 ## Conclusion
 
