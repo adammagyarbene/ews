@@ -104,4 +104,69 @@ model = keras.Sequential([keras.layers.Dense(units = 1, input_shape = [1])])
 
 
 
+# Section 2
+
+Skin cancer is an abnormal growth of skin cells, it is one of the most common cancers and unfortunately, it can become deadly. The good news though is when caught early, your dermatologist can treat it and eliminate it entirely.
+
+Using deep learning and neural networks, we'll be able to classify benign and malignant skin diseases, which may help the doctor diagnose cancer at an earlier stage. In this tutorial, we will make a skin disease classifier that tries to distinguish between benign (nevus and seborrheic keratosis) and malignant (melanoma) skin diseases from only photographic images using TensorFlow framework in Python.
+
+## Block2
+For this tutorial, we'll be using only a small part of ISIC archive dataset, the below function downloads and extract the dataset into a new data folder.
+
+This will take several minutes depending on your connection, after that, the data folder will appear that contains the training, validation and testing sets. Each set is a folder that has three categories of skin disease images.
+
+## Block4
+
+Now that we have the dataset in our machine, let's find a way to label these images, remember we're going to classify only benign and malignant skin diseases, so we need to label nevus and seborrheic keratosis as the value 0 and melanoma 1.
+
+The below cell generates a metadata CSV file for each set, each row in the CSV file corresponds to a path to an image along with its label (0 or 1)
+
+The generate_csv() function accepts 2 arguments, the first is the path of the set.
+
+The second parameter is a dictionary that maps each skin disease category to its corresponding label value (again, 0 for benign and 1 for malignant).
+
+The reason I did a function like this is the ability to use it on other skin disease classifications (such as melanocytic classification), so you can add more skin diseases and use it for other problems as well.
+
+## Block5
+
+After we successfully ran the previous cell, we can notice that 3 CSV files will appear in our current directory. Now let's load our data into DataSets.
+
+Now we have loaded the dataset (train_ds and valid_ds), each sample is a tuple of filepath (path to the image file) and label (0 for benign and 1 for malignant).
+
+## Block6
+
+Let's load the images
+
+## Block7
+
+Everything is as expected, now let's prepare this dataset for training
+
+## Block8
+
+As you can see, it's extremely hard to differentiate between malignant and benign diseases, let's see how our model will deal with it.
+
+Great, now our dataset is ready, let's dive into building our model.
+
+## Block9
+
+Notice before, we resized all images to (299, 299, 3), and that's because of what InceptionV3 architecture expects as input, so we'll be using transfer learning with TensorFlow Hub library to download and load the InceptionV3 architecture along with its ImageNet pre-trained weights.
+
+We set trainable to False so we won't be able to adjust the pre-trained weights during our training, we also added a final output layer with 1 unit that is expected to output a value between 0 and 1 (close to 0 means benign, and 1 for malignant).
+
+After that, since this is a binary classification, we built our model using binary crossentropy loss, and used accuracy as our metric (not that reliable metric, we'll see sooner why), here is the output of our model summary:
+
+## Block10
+
+Since fit() method doesn't know the number of samples there are in the dataset, we need to specify steps_per_epoch and validation_steps parameters for the number of iterations (the number of samples divided by the batch size) of the training set and validatiion set respectively.
+
+## Block11
+
+Now that we've trained our model to predict the benign and malignant classes let's make a function that predicts the class of any image passed to it.
+
+## Conclusion
+
+
+
+
+
 
