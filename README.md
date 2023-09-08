@@ -285,42 +285,9 @@ history = m.fit(train_ds,
 ```
 Since fit() method doesn't know the number of samples there are in the dataset, we need to specify steps_per_epoch and validation_steps parameters for the number of iterations (the number of samples divided by the batch size) of the training set and validatiion set respectively.
 
-## Block11
-
-Model Evaluation
-
-```python
-
-# evaluation
-# load testing set
-test_metadata_filename = "test.csv"
-
-df_test = pd.read_csv(test_metadata_filename)
-
-n_testing_samples = len(df_test)
-
-print("Number of testing samples:", n_testing_samples)
-
-test_ds = tf.data.Dataset.from_tensor_slices((df_test["filepath"], df_test["label"]))
-
-def prepare_for_testing(ds, cache=True, shuffle_buffer_size=1000):
-  if cache:
-    if isinstance(cache, str):
-      ds = ds.cache(cache)
-    else:
-      ds = ds.cache()
-  ds = ds.shuffle(buffer_size=shuffle_buffer_size)
-  return ds
-
-test_ds = test_ds.map(process_path)
-
-test_ds = prepare_for_testing(test_ds, cache="test-cached-data")
-
-```
-
 Now that we've trained our model to predict the benign and malignant classes let's make a function that predicts the class of any image passed to it.
 
-## Block 12
+## Block 11
 
 ```python
 
@@ -358,6 +325,41 @@ def predict_image_class(img_path, model, threshold=0.5):
 
 ## Conclusion
 
+
+
+
+## Block11
+
+Model Evaluation
+
+```python
+
+# evaluation
+# load testing set
+test_metadata_filename = "test.csv"
+
+df_test = pd.read_csv(test_metadata_filename)
+
+n_testing_samples = len(df_test)
+
+print("Number of testing samples:", n_testing_samples)
+
+test_ds = tf.data.Dataset.from_tensor_slices((df_test["filepath"], df_test["label"]))
+
+def prepare_for_testing(ds, cache=True, shuffle_buffer_size=1000):
+  if cache:
+    if isinstance(cache, str):
+      ds = ds.cache(cache)
+    else:
+      ds = ds.cache()
+  ds = ds.shuffle(buffer_size=shuffle_buffer_size)
+  return ds
+
+test_ds = test_ds.map(process_path)
+
+test_ds = prepare_for_testing(test_ds, cache="test-cached-data")
+
+```
 
 
 
