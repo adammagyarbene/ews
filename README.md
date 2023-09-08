@@ -149,7 +149,7 @@ The reason I did a function like this is the ability to use it on other skin dis
 
 After we successfully ran the previous cell, we can notice that 3 CSV files will appear in our current directory. Now let's load our data into DataSets.
 
-`
+```python
 train_metadata_filename = "train.csv"
 valid_metadata_filename = "valid.csv"
 
@@ -165,7 +165,7 @@ print("Number of validation samples:", n_validation_samples)
 
 train_ds = tf.data.Dataset.from_tensor_slices((df_train["filepath"], df_train["label"]))
 valid_ds = tf.data.Dataset.from_tensor_slices((df_valid["filepath"], df_valid["label"]))
-`
+```
 
 Now we have loaded the dataset (train_ds and valid_ds), each sample is a tuple of filepath (path to the image file) and label (0 for benign and 1 for malignant).
 
