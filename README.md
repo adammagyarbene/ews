@@ -85,6 +85,7 @@ The first is that you trained it using very little data. There’s only six poin
 ## Excercise 2
 
 ```python
+
 def house_model(y_new):
     xs=[]
     ys=[]
@@ -94,7 +95,8 @@ def house_model(y_new):
     
     xs=np.array(xs,dtype=float)
     ys=np.array(ys, dtype=float)
-model = keras.Sequential([keras.layers.Dense(units = 1, input_shape = [1])])
+    layer = keras.layers.Dense(units = 1, input_shape = [1])
+    model = keras.Sequential([layer])
     model.compile(optimizer='sgd', loss='mean_squared_error')    
     
     model.fit(xs, ys, epochs = 4500)
