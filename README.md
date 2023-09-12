@@ -275,6 +275,8 @@ Training the model
 
 ```python
 
+model_name = f"benign-vs-malignant_{batch_size}_{optimizer}"
+modelcheckpoint = tf.keras.callbacks.ModelCheckpoint(model_name + "_{val_loss:.3f}.h5", save_best_only=True, verbose=1)
 
 history = m.fit(train_ds, 
                 validation_data=valid_ds,
@@ -285,11 +287,60 @@ history = m.fit(train_ds,
 )
 
 ```
+We're using ModelCheckpoint callback to save the best weights so far on each epoch, that's why I set epochs to 100, that's because it can converge to better weights at any time, to save your time, feel free to reduce that to 30 or so.
+
 Since fit() method doesn't know the number of samples there are in the dataset, we need to specify steps_per_epoch and validation_steps parameters for the number of iterations (the number of samples divided by the batch size) of the training set and validatiion set respectively.
 
 Now that we've trained our model to predict the benign and malignant classes let's make a function that predicts the class of any image passed to it.
 
-## Block 11
+
+
+## Block11
+
+Model Evaluation
+
+```python
+
+# evaluation
+# load testing set
+test_metadata_filename = "test.csv"
+
+df_test = pd.read_csv(test_metadata_filename)
+
+n_testing_samples = len(df_test)
+
+print("Number of testing samples:", n_testing_samples)
+
+test_ds = tf.data.Dataset.from_tensor_slices((df_test["filepath"], df_test["label"]))
+
+def prepare_for_testing(ds, cache=True, shuffle_buffer_size=1000):
+  if cache:
+    if isinstance(cache, str):
+      ds = ds.cache(cache)
+    else:
+      ds = ds.cache()
+  ds = ds.shuffle(buffer_size=shuffle_buffer_size)
+  return ds
+
+test_ds = test_ds.map(process_path)
+
+test_ds = prepare_for_testing(test_ds, cache="test-cached-data")
+
+# convert testing set to numpy array to fit in memory (don't do that when testing
+# set is too large)
+y_test = np.zeros((n_testing_samples,))
+X_test = np.zeros((n_testing_samples, 299, 299, 3))
+for i, (img, label) in enumerate(test_ds.take(n_testing_samples)):
+  # print(img.shape, label.shape)
+  X_test[i] = img
+  y_test[i] = label.numpy()
+
+print("y_test.shape:", y_test.shape)
+
+```
+
+
+## Block 12
 
 ```python
 
@@ -328,40 +379,6 @@ def predict_image_class(img_path, model, threshold=0.5):
 ## Conclusion
 
 
-
-
-## Block11
-
-Model Evaluation
-
-```python
-
-# evaluation
-# load testing set
-test_metadata_filename = "test.csv"
-
-df_test = pd.read_csv(test_metadata_filename)
-
-n_testing_samples = len(df_test)
-
-print("Number of testing samples:", n_testing_samples)
-
-test_ds = tf.data.Dataset.from_tensor_slices((df_test["filepath"], df_test["label"]))
-
-def prepare_for_testing(ds, cache=True, shuffle_buffer_size=1000):
-  if cache:
-    if isinstance(cache, str):
-      ds = ds.cache(cache)
-    else:
-      ds = ds.cache()
-  ds = ds.shuffle(buffer_size=shuffle_buffer_size)
-  return ds
-
-test_ds = test_ds.map(process_path)
-
-test_ds = prepare_for_testing(test_ds, cache="test-cached-data")
-
-```
 
 
 
