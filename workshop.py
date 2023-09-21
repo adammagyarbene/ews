@@ -203,7 +203,7 @@ history = model.fit(train_ds,
                 steps_per_epoch=n_training_samples // batch_size,
                 validation_steps=n_validation_samples // batch_size,
                 verbose=1,
-                epochs=25
+                epochs=25,
                 callbacks=[modelcheckpoint]
 )
 
