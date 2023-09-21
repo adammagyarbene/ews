@@ -260,7 +260,7 @@ Training the model
 model_name = f"benign-vs-malignant_{batch_size}_{optimizer}"
 modelcheckpoint = tf.keras.callbacks.ModelCheckpoint(model_name + "_{val_loss:.3f}.h5", save_best_only=True, verbose=1)
 
-history = model.fit(train_ds, 
+model.fit(train_ds, 
                 validation_data=valid_ds,
                 steps_per_epoch=n_training_samples // batch_size,
                 validation_steps=n_validation_samples // batch_size,
