@@ -46,5 +46,5 @@ def delete_every_second_image(root_folder):
                 print(f"Error deleting {file_to_delete}: {e}")
 
 # Example usage:
-root_folder = "/Users/adammagyar/dev/workshop/files/"
+root_folder = "/Users/adammagyar/dev/workshop/files/test"
 delete_every_second_image(root_folder)

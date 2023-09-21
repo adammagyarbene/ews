@@ -23,6 +23,11 @@ tf.keras.backend.clear_session()
 # 0 for benign, 1 for malignant
 class_names = ["benign", "malignant"]
 
+
+# training parameters
+batch_size = 64
+optimizer = "rmsprop"
+
 ########################################
 ### Next slot
 ########################################
@@ -95,8 +100,6 @@ valid_ds = tf.data.Dataset.from_tensor_slices((df_valid["filepath"], df_valid["l
 
 
 
-
-
 ########################################
 ### Next slot
 ### Load and decode the images
@@ -111,18 +114,11 @@ def decode_img(img):
   # resize the image to the desired size.
   return tf.image.resize(img, [299, 299])
 
-for image, label in train_ds.take(1):
-    print("Image shape:", image.shape)
-    print("Label:", label.numpy())
     
 ########################################
 ### Next slot
 ### Prepare dataset for the training
 ########################################
-
-# training parameters
-batch_size = 64
-optimizer = "rmsprop"
 
 
 def process_path(filepath, label):
@@ -181,35 +177,35 @@ show_batch(batch)
 # InceptionV3 model & pre-trained weights
 module_url = "https://tfhub.dev/google/tf2-preview/inception_v3/feature_vector/4"
 
-m = tf.keras.Sequential([
+model = tf.keras.Sequential([
     hub.KerasLayer(module_url, output_shape=[2048], trainable=False),
     tf.keras.layers.Dense(1, activation="sigmoid")
 ])
 
-m.build([None, 299, 299, 3])
+model.build([None, 299, 299, 3])
 
-m.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
 
-m.summary()
+model.summary()
 
 ########################################
 ### Next slot
 ### Training the Model
 ########################################
 
-history = m.fit(train_ds, 
+
+model_name = f"benign-vs-malignant_{batch_size}_{optimizer}"
+
+modelcheckpoint = tf.keras.callbacks.ModelCheckpoint(model_name + "_{val_loss:.3f}.h5", save_best_only=True, verbose=1)
+
+history = model.fit(train_ds, 
                 validation_data=valid_ds,
                 steps_per_epoch=n_training_samples // batch_size,
                 validation_steps=n_validation_samples // batch_size,
                 verbose=1,
                 epochs=25
+                callbacks=[modelcheckpoint]
 )
-
-
-########################################
-### Next slot
-### Model Evaluation
-########################################
 
 # evaluation
 # load testing set
@@ -236,23 +232,50 @@ test_ds = test_ds.map(process_path)
 
 test_ds = prepare_for_testing(test_ds, cache="test-cached-data")
 
-
-########################################
-### Next slot
-### Let's convert our test set from tf.data into a NumPy array
-########################################
-
 # convert testing set to numpy array to fit in memory (don't do that when testing
 # set is too large)
 y_test = np.zeros((n_testing_samples,))
 X_test = np.zeros((n_testing_samples, 299, 299, 3))
-
 for i, (img, label) in enumerate(test_ds.take(n_testing_samples)):
   # print(img.shape, label.shape)
   X_test[i] = img
   y_test[i] = label.numpy()
 
 print("y_test.shape:", y_test.shape)
+
+# load the weights with the least loss
+# model.load_weights("benign-vs-malignant_64_")
+
+print("Evaluating the model...")
+loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
+print("Loss:", loss, "  Accuracy:", accuracy)
+
+from sklearn.metrics import accuracy_score
+
+def get_predictions(threshold=None):
+  """
+  Returns predictions for binary classification given `threshold`
+  For instance, if threshold is 0.3, then it'll output 1 (malignant) for that sample if
+  the probability of 1 is 30% or more (instead of 50%)
+  """
+  y_pred = model.predict(X_test)
+  if not threshold:
+    threshold = 0.5
+  result = np.zeros((n_testing_samples,))
+  for i in range(n_testing_samples):
+    # test melanoma probability
+    if y_pred[i][0] >= threshold:
+      result[i] = 1
+    # else, it's 0 (benign)
+  return result
+
+threshold = 0.23
+# get predictions with 23% threshold
+# which means if the model is 23% sure or more that is malignant,
+# it's assigned as malignant, otherwise it's benign
+y_pred = get_predictions(threshold)
+accuracy_after = accuracy_score(y_test, y_pred)
+print("Accuracy after setting the threshold:", accuracy_after)
 
 ########################################
 ### Next slot
@@ -277,6 +300,6 @@ def predict_image_class(img_path, model, threshold=0.5):
   plt.show()
 
 
-predict_image_class("data/test/melanoma/ISIC_0013767.jpg", m)
-predict_image_class("data/test/nevus/ISIC_0012092.jpg", m)
-predict_image_class("data/test/melanoma/ISIC_0013767.jpg", m)
+predict_image_class("data/test/melanoma/ISIC_0013767.jpg", model)
+predict_image_class("data/test/nevus/ISIC_0012092.jpg", model)
+predict_image_class("data/test/melanoma/ISIC_0013767.jpg", model)
